@@ -11,6 +11,7 @@ search_results_collection = db.get_collection('search_results')
 
 
 def search_results_helper(search_result):
+    """Take each article and convert it to JSONable format"""
     return {
         "id": str(search_result["_id"]),
         "link": search_result["link"],
@@ -25,6 +26,14 @@ def search_results_helper(search_result):
 
 
 async def add_search_results(results: list[dict]):
+    """Add articles to database
+
+    Check if each article does not exist in database. If it exists,
+    add search words to article's 'tags' field. Else, article will
+    be added to a database.
+    :param results: List of new articles
+    :return: List of articles added to a database
+    """
     new_results = []
     for result in results:
         if await search_results_collection.find_one({"link": result['link']}):
@@ -39,6 +48,7 @@ async def add_search_results(results: list[dict]):
 
 
 async def retrieve_search_result_by_id(id_: str):
+    """Find concrete article in a database by ID"""
     try:
         result = await search_results_collection.find_one({"_id": ObjectId(id_)})
         if result:
@@ -48,6 +58,15 @@ async def retrieve_search_result_by_id(id_: str):
 
 
 async def retrieve_search_results_by_tags(tags: list[str]):
+    """Find articles by tags
+
+    Take search words and check if database contain articles,
+    which have more than half of words in 'tags' fields matches
+    with words in search query. If database have them, return
+    this articles.
+    :param tags: List of search words
+    :return: List of articles
+    """
     matched_result = []
     results = search_results_collection.find()
     search_tags = set(tags)
@@ -59,6 +78,7 @@ async def retrieve_search_results_by_tags(tags: list[str]):
 
 
 async def retrieve_newest_search_results():
+    """Get 20 newest articles from database"""
     results = []
     async for result in search_results_collection.find().sort('date', -1).limit(20):
         results.append(search_results_helper(result))
@@ -66,6 +86,12 @@ async def retrieve_newest_search_results():
 
 
 async def update_content_of_article(id_: str, content: list[list]):
+    """Add content to article
+
+    :param id_: ID of existing article
+    :param content: List of content
+    :return: Article with content
+    """
     await search_results_collection.update_one({'_id': ObjectId(id_)}, {"$set": {"content": content}})
     article = await search_results_collection.find_one({'_id': ObjectId(id_)})
     return search_results_helper(article)

@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+
 from server.routes.search_result import router as SearchResultRouter
 
 
