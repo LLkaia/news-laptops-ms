@@ -28,7 +28,7 @@ def search_results_helper(search_result):
 async def add_search_results(results: list[dict]):
     """Add articles to database
 
-    Check if each article does not exist in database. If it exists,
+    Check if each article does not exist in database. If it does,
     add search words to article's 'tags' field. Else, article will
     be added to a database.
     :param results: List of new articles
@@ -61,18 +61,19 @@ async def retrieve_search_results_by_tags(tags: list[str]):
     """Find articles by tags
 
     Take search words and check if database contain articles,
-    which have more than half of words in 'tags' fields matches
+    which have more than :percentage: of words in 'tags' fields matches
     with words in search query. If database have them, return
     this articles.
     :param tags: List of search words
     :return: List of articles
     """
+    percentage = 0.75
     matched_result = []
     results = search_results_collection.find()
     search_tags = set(tags)
     async for result in results:
         common = search_tags.intersection(result["tags"])
-        if len(common) > len(search_tags) / 2:
+        if len(common) > len(search_tags) * percentage:
             matched_result.append(search_results_helper(result))
     return matched_result
 

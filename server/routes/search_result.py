@@ -1,4 +1,5 @@
-from fastapi import APIRouter, status, HTTPException
+from fastapi import APIRouter, status, HTTPException, Query
+from fastapi_pagination import Page, paginate
 
 from server.scraper import scrap_from_search, scrap_content
 from server.models.search_result import ArticleModel, ExtendArticleModel
@@ -12,25 +13,38 @@ from server.database import (
 
 
 router = APIRouter()
+Page = Page.with_custom_options(
+    size=Query(5, ge=1, le=10),
+)
 
 
-@router.get("/", status_code=status.HTTP_200_OK, response_model=list[ArticleModel])
-async def get_search_results(find: str | None = None) -> list[ArticleModel]:
+@router.get("/", status_code=status.HTTP_200_OK, response_model=Page[ArticleModel])
+async def get_search_results(find: str | None = None) -> Page[ArticleModel]:
     """Find articles by search query
 
     Get list of articles which match with search query from database.
-    If count of articles is less than 20, scrap new articles and add
-    them to a database. If 'find' param is empty, return 20 newest
+    If count of articles is less than 10, scrap new articles and add
+    them to a database. If 'find' param is empty, return newest
     articles.
     """
     if find:
         results = await retrieve_search_results_by_tags(find.split())
-        if len(results) < 20:
+        if len(results) < 10:
             new_results = scrap_from_search(find)
             new_results = await add_search_results(new_results)
-            results.extend(new_results)
-        return results[:20]
-    return await retrieve_newest_search_results()
+
+            # check for adding only unic
+            for new_one in new_results:
+                repeats = False
+                for old_one in results:
+                    if new_one['id'] == old_one['id']:
+                        repeats = True
+                        break
+                if not repeats:
+                    results.append(new_one)
+
+        return paginate(results)
+    return paginate(await retrieve_newest_search_results())
 
 
 @router.get("/{id}", status_code=status.HTTP_200_OK, response_model=ExtendArticleModel)
