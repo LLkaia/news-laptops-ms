@@ -68,15 +68,23 @@ async def retrieve_search_results_by_tags(tags: list[str]):
     """
     percentage = 0.75
     tags = list(set(tags))
-    js_function = """
-    function() {
-        const searchTags = %s;
-        const documentTags = this.tags;
-        const intersection = documentTags.filter(tag => searchTags.includes(tag));
-        return intersection.length >= (searchTags.length * %f);
+    filter_expression = {
+        '$expr': {
+            '$function': {
+                'body': """
+                        function(search, document, percentage) {
+                            const searchTags = search;
+                            const documentTags = document;
+                            const intersection = documentTags.filter(tag => searchTags.includes(tag));
+                            return intersection.length >= (searchTags.length * percentage);
+                        }
+                        """,
+                'args': [tags, '$tags', percentage],
+                'lang': 'js'
+            }
+        }
     }
-    """ % (str(tags), percentage)
-    documents = search_results_collection.find({'$where': js_function})
+    documents = search_results_collection.find(filter_expression)
     return [search_results_helper(result) async for result in documents]
 
 

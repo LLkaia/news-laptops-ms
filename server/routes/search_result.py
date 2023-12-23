@@ -29,9 +29,9 @@ async def get_search_results(find: str | None = None) -> Page[ArticleModel]:
     """
     if find:
         results = await retrieve_search_results_by_tags(find.split())
-        if len(results) < 5:
-            await update_search_results(find)
-            results = await retrieve_search_results_by_tags(find.split())
+        # if len(results) < 5:
+        #     await update_search_results(find)
+        #     results = await retrieve_search_results_by_tags(find.split())
         return paginate(results)
     return paginate(await retrieve_newest_search_results())
 
