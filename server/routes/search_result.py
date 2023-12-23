@@ -1,10 +1,10 @@
 from fastapi import APIRouter, status, HTTPException, Query
 from fastapi_pagination import Page, paginate
 
-from server.scraper import scrap_from_search, scrap_content
+from server.scraper import scrap_content
 from server.models.search_result import ArticleModel, ExtendArticleModel
 from server.database import (
-    add_search_results,
+    update_search_results,
     retrieve_search_result_by_id,
     retrieve_search_results_by_tags,
     retrieve_newest_search_results,
@@ -18,7 +18,7 @@ Page = Page.with_custom_options(
 )
 
 
-@router.get("/", status_code=status.HTTP_200_OK, response_model=Page[ArticleModel])
+@router.get("/search", status_code=status.HTTP_200_OK, response_model=Page[ArticleModel])
 async def get_search_results(find: str | None = None) -> Page[ArticleModel]:
     """Find articles by search query
 
@@ -29,20 +29,9 @@ async def get_search_results(find: str | None = None) -> Page[ArticleModel]:
     """
     if find:
         results = await retrieve_search_results_by_tags(find.split())
-        if len(results) < 10:
-            new_results = scrap_from_search(find)
-            new_results = await add_search_results(new_results)
-
-            # check for adding only unic
-            for new_one in new_results:
-                repeats = False
-                for old_one in results:
-                    if new_one['id'] == old_one['id']:
-                        repeats = True
-                        break
-                if not repeats:
-                    results.append(new_one)
-
+        if len(results) < 5:
+            await update_search_results(find)
+            results = await retrieve_search_results_by_tags(find.split())
         return paginate(results)
     return paginate(await retrieve_newest_search_results())
 

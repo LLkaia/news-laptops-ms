@@ -2,6 +2,8 @@ import motor.motor_asyncio
 from bson import ObjectId
 from bson.errors import InvalidId
 
+from server.scraper import scrap_from_search
+
 
 MONGO_DETAILS = 'mongodb://localhost:27017'
 client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_DETAILS)
@@ -25,26 +27,23 @@ def search_results_helper(search_result):
     }
 
 
-async def add_search_results(results: list[dict]):
+async def update_search_results(search: str):
     """Add articles to database
 
     Check if each article does not exist in database. If it does,
     add search words to article's 'tags' field. Else, article will
     be added to a database.
-    :param results: List of new articles
+    :param search: Search query
     :return: List of articles added to a database
     """
-    new_results = []
+    results = scrap_from_search(search)
     for result in results:
         if await search_results_collection.find_one({"link": result['link']}):
             new_result = await search_results_collection.find_one({"link": result['link']})
             new_result["tags"] = list(set(new_result["tags"] + result['tags']))
             await search_results_collection.update_one({"_id": ObjectId(new_result["_id"])}, {"$set": new_result})
         else:
-            result = await search_results_collection.insert_one(result)
-            new_result = await search_results_collection.find_one({"_id": result.inserted_id})
-        new_results.append(search_results_helper(new_result))
-    return new_results
+            await search_results_collection.insert_one(result)
 
 
 async def retrieve_search_result_by_id(id_: str):
@@ -68,14 +67,17 @@ async def retrieve_search_results_by_tags(tags: list[str]):
     :return: List of articles
     """
     percentage = 0.75
-    matched_result = []
-    results = search_results_collection.find()
-    search_tags = set(tags)
-    async for result in results:
-        common = search_tags.intersection(result["tags"])
-        if len(common) > len(search_tags) * percentage:
-            matched_result.append(search_results_helper(result))
-    return matched_result
+    tags = list(set(tags))
+    js_function = """
+    function() {
+        const searchTags = %s;
+        const documentTags = this.tags;
+        const intersection = documentTags.filter(tag => searchTags.includes(tag));
+        return intersection.length >= (searchTags.length * %f);
+    }
+    """ % (str(tags), percentage)
+    documents = search_results_collection.find({'$where': js_function})
+    return [search_results_helper(result) async for result in documents]
 
 
 async def retrieve_newest_search_results():

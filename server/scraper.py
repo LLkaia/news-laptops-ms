@@ -63,3 +63,5 @@ def scrap_content(link: str) -> list[list]:
             image = block.find('img').get('data-pin-media')
             content.append(('image', image))
     return content
+
+
