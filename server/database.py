@@ -56,15 +56,17 @@ async def retrieve_search_result_by_id(id_: str):
         return
 
 
-async def retrieve_search_results_by_tags(tags: list[str]):
+async def retrieve_search_results_by_tags(tags: list[str], page: int, limit: int):
     """Find articles by tags
 
     Take search words and check if database contain articles,
     which have more than :percentage: of words in 'tags' fields matches
     with words in search query. If database have them, return
-    this articles.
+    paginated articles and total amount of them.
+    :param limit: Page size
+    :param page: Number of page
     :param tags: List of search words
-    :return: List of articles
+    :return: Count and List of articles
     """
     percentage = 0.75
     tags = list(set(tags))
@@ -84,16 +86,21 @@ async def retrieve_search_results_by_tags(tags: list[str]):
             }
         }
     }
-    documents = search_results_collection.find(filter_expression)
-    return [search_results_helper(result) async for result in documents]
+    results = search_results_collection.find(filter_expression).skip((page - 1) * limit).limit(limit)
+    count = await search_results_collection.count_documents(filter_expression)
+    return count, [search_results_helper(result) async for result in results]
 
 
-async def retrieve_newest_search_results():
-    """Get 20 newest articles from database"""
-    results = []
-    async for result in search_results_collection.find().sort('date', -1).limit(20):
-        results.append(search_results_helper(result))
-    return results
+async def retrieve_newest_search_results(page: int, limit: int):
+    """Get the newest articles from database
+
+    :param limit: Page size
+    :param page: Number of page
+    :return: Count and List of articles
+    """
+    results = search_results_collection.find().sort('date', -1).skip((page - 1) * limit).limit(limit)
+    count = await search_results_collection.count_documents({})
+    return count, [search_results_helper(result) async for result in results]
 
 
 async def update_content_of_article(id_: str, content: list[list]):

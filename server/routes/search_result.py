@@ -1,8 +1,7 @@
-from fastapi import APIRouter, status, HTTPException, Query
-from fastapi_pagination import Page, paginate
+from fastapi import APIRouter, status, HTTPException
 
 from server.scraper import scrap_content
-from server.models.search_result import ArticleModel, ExtendArticleModel
+from server.models.search_result import SearchResponseModel, ExtendArticleModel
 from server.database import (
     update_search_results,
     retrieve_search_result_by_id,
@@ -13,13 +12,10 @@ from server.database import (
 
 
 router = APIRouter()
-Page = Page.with_custom_options(
-    size=Query(5, ge=1, le=10),
-)
 
 
-@router.get("/search", status_code=status.HTTP_200_OK, response_model=Page[ArticleModel])
-async def get_search_results(find: str | None = None) -> Page[ArticleModel]:
+@router.get("/search", status_code=status.HTTP_200_OK, response_model=SearchResponseModel)
+async def get_search_results(find: str | None = None, page: int = 1, limit: int = 5):
     """Find articles by search query
 
     Get list of articles which match with search query from database.
@@ -28,16 +24,17 @@ async def get_search_results(find: str | None = None) -> Page[ArticleModel]:
     articles.
     """
     if find:
-        results = await retrieve_search_results_by_tags(find.split())
-        # if len(results) < 5:
-        #     await update_search_results(find)
-        #     results = await retrieve_search_results_by_tags(find.split())
-        return paginate(results)
-    return paginate(await retrieve_newest_search_results())
+        count, results = await retrieve_search_results_by_tags(find.split(), page, limit)
+        if count < 5:
+            await update_search_results(find)
+            count, results = await retrieve_search_results_by_tags(find.split(), page, limit)
+        return {'count': count, 'results': results}
+    count, results = await retrieve_newest_search_results(page, limit)
+    return {'count': count, 'results': results}
 
 
 @router.get("/{id}", status_code=status.HTTP_200_OK, response_model=ExtendArticleModel)
-async def get_article(id: str) -> ExtendArticleModel:
+async def get_article(id: str):
     """Get concrete article with content
 
     Find article by ID in database and if it exists, check if it
