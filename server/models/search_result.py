@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import Enum
 
 from pydantic import BaseModel, HttpUrl
 
@@ -21,3 +22,9 @@ class SearchResponseModel(BaseModel):
 
 class ExtendArticleModel(ArticleModel):
     content: list[list] = []
+
+
+class Period(str, Enum):
+    last_week = "last-week"
+    last_month = "last-month"
+    all = "all"

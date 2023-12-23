@@ -1,7 +1,9 @@
-from fastapi import APIRouter, status, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, status, HTTPException, Query
 
 from server.scraper import scrap_content
-from server.models.search_result import SearchResponseModel, ExtendArticleModel
+from server.models.search_result import SearchResponseModel, ExtendArticleModel, Period
 from server.database import (
     update_search_results,
     retrieve_search_result_by_id,
@@ -15,7 +17,10 @@ router = APIRouter()
 
 
 @router.get("/search", status_code=status.HTTP_200_OK, response_model=SearchResponseModel)
-async def get_search_results(find: str | None = None, page: int = 1, limit: int = 5):
+async def get_search_results(find: Annotated[str | None, Query(description='Write search query here')] = None,
+                             page: Annotated[int, Query(ge=1)] = 1,
+                             limit: Annotated[int, Query(ge=1, le=10)] = 5,
+                             period: Period = Period.all):
     """Find articles by search query
 
     Get list of articles which match with search query from database.
@@ -24,10 +29,10 @@ async def get_search_results(find: str | None = None, page: int = 1, limit: int 
     articles.
     """
     if find:
-        count, results = await retrieve_search_results_by_tags(find.split(), page, limit)
+        count, results = await retrieve_search_results_by_tags(find.split(), page, limit, period)
         if count < 5:
             await update_search_results(find)
-            count, results = await retrieve_search_results_by_tags(find.split(), page, limit)
+            count, results = await retrieve_search_results_by_tags(find.split(), page, limit, period)
         return {'count': count, 'results': results}
     count, results = await retrieve_newest_search_results(page, limit)
     return {'count': count, 'results': results}
