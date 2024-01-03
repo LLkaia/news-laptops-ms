@@ -10,7 +10,7 @@ from server.models.search_result import Period
 
 MONGO_DETAILS = 'mongodb://mongodb:27017'
 client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_DETAILS)
-db = client.news
+db = client.lappy
 
 search_results_collection = db.get_collection('search_results')
 
