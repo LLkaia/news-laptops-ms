@@ -1,10 +1,11 @@
-from fastapi import APIRouter, status, HTTPException, Query
-from fastapi_pagination import Page, paginate
+from typing import Annotated
 
-from server.scraper import scrap_from_search, scrap_content
-from server.models.search_result import ArticleModel, ExtendArticleModel
+from fastapi import APIRouter, status, HTTPException, Query
+
+from server.scraper import scrap_content
+from server.models.search_result import SearchResponseModel, ExtendArticleModel, Period
 from server.database import (
-    add_search_results,
+    update_search_results,
     retrieve_search_result_by_id,
     retrieve_search_results_by_tags,
     retrieve_newest_search_results,
@@ -13,13 +14,13 @@ from server.database import (
 
 
 router = APIRouter()
-Page = Page.with_custom_options(
-    size=Query(5, ge=1, le=10),
-)
 
 
-@router.get("/", status_code=status.HTTP_200_OK, response_model=Page[ArticleModel])
-async def get_search_results(find: str | None = None) -> Page[ArticleModel]:
+@router.get("/search", status_code=status.HTTP_200_OK, response_model=SearchResponseModel)
+async def get_search_results(find: Annotated[str | None, Query(description='Write search query here')] = None,
+                             page: Annotated[int, Query(ge=1)] = 1,
+                             limit: Annotated[int, Query(ge=1, le=10)] = 5,
+                             period: Period = Period.all):
     """Find articles by search query
 
     Get list of articles which match with search query from database.
@@ -28,27 +29,17 @@ async def get_search_results(find: str | None = None) -> Page[ArticleModel]:
     articles.
     """
     if find:
-        results = await retrieve_search_results_by_tags(find.split())
-        if len(results) < 10:
-            new_results = scrap_from_search(find)
-            new_results = await add_search_results(new_results)
-
-            # check for adding only unic
-            for new_one in new_results:
-                repeats = False
-                for old_one in results:
-                    if new_one['id'] == old_one['id']:
-                        repeats = True
-                        break
-                if not repeats:
-                    results.append(new_one)
-
-        return paginate(results)
-    return paginate(await retrieve_newest_search_results())
+        count, results = await retrieve_search_results_by_tags(find.split(), page, limit, period)
+        if count < 5:
+            await update_search_results(find)
+            count, results = await retrieve_search_results_by_tags(find.split(), page, limit, period)
+        return {'count': count, 'results': results}
+    count, results = await retrieve_newest_search_results(page, limit)
+    return {'count': count, 'results': results}
 
 
 @router.get("/{id}", status_code=status.HTTP_200_OK, response_model=ExtendArticleModel)
-async def get_article(id: str) -> ExtendArticleModel:
+async def get_article(id: str):
     """Get concrete article with content
 
     Find article by ID in database and if it exists, check if it

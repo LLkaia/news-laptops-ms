@@ -63,10 +63,10 @@ This is a microservice designed to fetch and serve news articles using FastAPI, 
         ```
           http://localhost:8000/news/search?find=acer+aspire+7+review
         ```
-- `/news/search/{id}`: Show concrete article.
+- `/news/{id}`: Show concrete article.
 
     - Example:
 
         ```
-          http://localhost:8000/news/search/657c1690f253079b6f3ed074
+          http://localhost:8000/news/657c1690f253079b6f3ed074
         ```
