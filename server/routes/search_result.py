@@ -38,19 +38,19 @@ async def get_search_results(find: Annotated[str | None, Query(description='Writ
     return {'count': count, 'results': results}
 
 
-@router.get("/{id}", status_code=status.HTTP_200_OK, response_model=ExtendArticleModel)
-async def get_article(id: str):
+@router.get("/{id_}", status_code=status.HTTP_200_OK, response_model=ExtendArticleModel)
+async def get_article(id_: str):
     """Get concrete article with content
 
     Find article by ID in database and if it exists, check if it
     has content in 'content' field. If it is, return it, else scrap
     this content. If article is not exist in db, return 404.
     """
-    result = await retrieve_search_result_by_id(id)
+    result = await retrieve_search_result_by_id(id_)
     if result:
         if not result['content']:
             content = scrap_content(result['link'])
-            result = await update_content_of_article(id, content)
+            result = await update_content_of_article(id_, content)
         return result
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")

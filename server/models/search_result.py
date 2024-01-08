@@ -12,7 +12,6 @@ class ArticleModel(BaseModel):
     image: HttpUrl | None = None
     date: datetime | None = None
     description: str = ""
-    tags: set[str] = set()
 
 
 class SearchResponseModel(BaseModel):
