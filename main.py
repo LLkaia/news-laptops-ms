@@ -1,3 +1,4 @@
+"""start app"""
 import uvicorn
 
 

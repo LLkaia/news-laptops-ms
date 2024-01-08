@@ -11,12 +11,11 @@ from server.models.search_result import Period
 MONGO_DETAILS = 'mongodb://mongodb:27017'
 client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_DETAILS)
 db = client.lappy
-
 search_results_collection = db.get_collection('search_results')
 
 
 def search_results_helper(search_result):
-    """Take each article and convert it to JSONable format"""
+    """Convert each article to JSONable format"""
     return {
         "id": str(search_result["_id"]),
         "link": search_result["link"],
