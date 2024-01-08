@@ -29,10 +29,10 @@ async def get_search_results(find: Annotated[str | None, Query(description='Writ
     articles.
     """
     if find:
-        count, results = await retrieve_search_results_by_tags(find.split(), page, limit, period)
+        count, results = await retrieve_search_results_by_tags(find.lower().split(), page, limit, period)
         if count < 5:
-            await update_search_results(find)
-            count, results = await retrieve_search_results_by_tags(find.split(), page, limit, period)
+            await update_search_results(find.lower())
+            count, results = await retrieve_search_results_by_tags(find.lower().split(), page, limit, period)
         return {'count': count, 'results': results}
     count, results = await retrieve_newest_search_results(page, limit)
     return {'count': count, 'results': results}

@@ -37,7 +37,6 @@ async def update_search_results(search: str):
     add search words to article's 'tags' field. Else, article will
     be added to a database.
     :param search: Search query
-    :return: List of articles added to a database
     """
     results = scrap_from_search(search)
     for result in results:
