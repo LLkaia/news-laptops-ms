@@ -39,7 +39,7 @@ def scrap_from_search(search: str) -> list[dict]:
     return laptops_data
 
 
-def scrap_content(link: str) -> list[list]:
+def scrap_content(link: str) -> list:
     """Parse concrete article's content
 
     :param link: URL of article
@@ -63,3 +63,25 @@ def scrap_content(link: str) -> list[list]:
             image = block.find('img').get('data-pin-media')
             content.append(('image', image))
     return content
+
+
+def scrap_newest() -> list[dict]:
+    """Scrap list of the newest articles."""
+    laptops_data = []
+    for i in range(1, 10):
+        link_src = f'https://www.laptopmag.com/search/page/{i}?articleType=all&searchTerm=laptops&sortBy=publishedDate'
+        page_src = requests.get(link_src, headers)
+        soup_src = BeautifulSoup(page_src.content, 'html.parser')
+        laptops = soup_src.find_all('div', class_='listingResult')
+        for laptop in laptops:
+            dct = dict()
+            dct['link'] = laptop.find('a', class_='article-link').get('href')
+            dct['image'] = laptop.find('img').get('data-pin-media')
+            dct['title'] = laptop.find('h3', class_='article-name').text.strip()
+            dct['author'] = laptop.find('span', attrs={'style': 'white-space:nowrap'}).text.strip()
+            dct['date'] = laptop.find('time').get('datetime')
+            dct['description'] = laptop.find('p', class_='synopsis').text.strip()
+            dct['tags'] = dct['title'].split()
+            dct['content'] = []
+            laptops_data.append(dct)
+    return laptops_data

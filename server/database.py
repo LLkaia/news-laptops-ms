@@ -104,6 +104,23 @@ async def update_content_of_article(id_: str, content: list[list]):
     return search_results_helper(article)
 
 
+async def add_newest_news(articles: list):
+    """Add the newest articles to database.
+
+    Check if each article does not exist in database. If it does,
+    add search words to article's 'tags' field. Else, article will
+    be added to a database.
+    :param articles: List of the newest articles
+    """
+    for result in articles:
+        if await search_results_collection.find_one({"link": result['link']}):
+            new_result = await search_results_collection.find_one({"link": result['link']})
+            new_result["tags"] = list(set(new_result["tags"] + result['tags']))
+            await search_results_collection.update_one({"_id": ObjectId(new_result["_id"])}, {"$set": new_result})
+        else:
+            await search_results_collection.insert_one(result)
+
+
 def resolve_period_expression(period: Period) -> dict:
     """Create expression based on Period from query"""
     if period is Period.last_week:
