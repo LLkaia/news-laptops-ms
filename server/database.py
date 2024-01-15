@@ -11,7 +11,7 @@ from server.models.search_result import Period
 MONGO_DETAILS = 'mongodb://mongodb:27017'
 client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_DETAILS)
 db = client.lappy
-search_results_collection = db.get_collection('search_results')
+search_results_collection = db.get_collection('news')
 
 
 def search_results_helper(search_result):
